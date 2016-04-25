@@ -34,7 +34,7 @@ complex and delicious funcionalities.
 Contact
 -------
 
-[The Venosyd Open Source Team](http://venosyd.com/opensource)
+[The Venosyd Open Source Team](http://venosyd.com/opensource)  
 `thevost@venosyd.com`
 
 venosyd ©2016
