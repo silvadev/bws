@@ -11,17 +11,10 @@
 part of bws.server;
 
 ///
-/// interface for the providers
+/// provides basic markup, script and media files. builds the code when
+/// seeks modifications and wait for conclusion to realize the request.
 ///
-abstract class Provider {
-  /// serve files
-  serve(HttpRequest request);
-}
-
-///
-/// provides basic markup, script and media files
-///
-class StaticFilesProvider implements Provider {
+class StaticFilesProvider {
   //
   static final String _jsFiles = Platform.script.resolve('../build/web/').toFilePath();
   static final String _dartFiles = Platform.script.resolve('../web/').toFilePath();
@@ -32,10 +25,46 @@ class StaticFilesProvider implements Provider {
   /// Dart souces folder
   final VirtualDirectory _clientDart = new VirtualDirectory(_dartFiles);
 
+  /// during the process of building, the requests are blocked
+  /// this one stores the request to process later the building
+  HttpRequest requestEnqueued;
+
+  /// flag that indicates if pub build is running
+  bool buildRunning = false;
+
+  /// constructor of the plugin, calls for directory watcher changes for
+  /// recompiling the code
+  StaticFilesProvider() {
+    Isolate.spawnUri(new Uri(path: '../lib/bws_watcher.dart'), [], s1);
+    r1.where(validateWatcherMessage).listen(processWatcherMessage);
+  }
+
+  /// functions which opens door to the static file processing
+  /// service
+  void staticFileLoad(HttpRequest request) {
+    if (!buildRunning) {
+      _serve(request);
+    } else {
+      requestEnqueued = request;
+    }
+  }
+
+  /// verifies if the message is from WATCHER isolate
+  validateWatcherMessage(sended) => sended is String && sended.startsWith('[WATCHER]');
+
+  /// process message from WATCHER isolate
+  processWatcherMessage(sended) {
+    buildRunning = sended.contains('running');
+    if (!buildRunning && requestEnqueued != null) {
+      _serve(requestEnqueued);
+      requestEnqueued = null;
+    }
+  }
+
   ///
   /// treats with static files to the web client
   ///
-  void serve(HttpRequest request) {
+  void _serve(HttpRequest request) {
     if (request.uri.path == '/') {
       request.response.redirect(Uri.parse('/index.html'));
     } else {
@@ -58,7 +87,7 @@ class StaticFilesProvider implements Provider {
         }
         var fileUri = new Uri.file(_jsFiles).resolve(fileRequested);
 
-        print('[BWS] Serving file: ${fileUri.toFilePath()}');
+        sysout('Serving file: ${fileUri.toFilePath()}');
         _clientJS.serveFile(new File(fileUri.toFilePath()), request);
       }
     }
