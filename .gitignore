@@ -4,4 +4,5 @@
 build/
 packages/
 bin/packages
+web
 web/

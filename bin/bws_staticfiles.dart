@@ -39,18 +39,24 @@ class StaticFilesProvider implements Provider {
     if (request.uri.path == '/') {
       request.response.redirect(Uri.parse('/index.html'));
     } else {
+      var fileRequested = request.uri.path.substring(1);
+
+      // adds a .html to simulate apache shortcuts
+      if (!fileRequested.contains('.')) {
+        fileRequested += '.html';
+      }
+
       // Dart directioned request handler
       if (request.headers.value(HttpHeaders.USER_AGENT).contains('(Dart)')) {
-        var fileUri = new Uri.file(_dartFiles).resolve(request.uri.path.substring(1));
+        var fileUri = new Uri.file(_dartFiles).resolve(fileRequested);
         _clientDart.serveFile(new File(fileUri.toFilePath()), request);
       }
       // JavaScript directioned request handler
       else {
-        var file = request.uri.path.substring(1);
-        if (file.endsWith('.dart')) {
-          file += '.js';
+        if (fileRequested.endsWith('.dart')) {
+          fileRequested += '.js';
         }
-        var fileUri = new Uri.file(_jsFiles).resolve(file);
+        var fileUri = new Uri.file(_jsFiles).resolve(fileRequested);
 
         print('[BWS] Serving file: ${fileUri.toFilePath()}');
         _clientJS.serveFile(new File(fileUri.toFilePath()), request);
